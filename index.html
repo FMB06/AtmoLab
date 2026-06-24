@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <!-- Encodage en UTF-8 : indispensable pour éviter les caractères du type Ã©, Ã¨, â€™. -->
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+  <!-- Affichage adapté aux ordinateurs, tablettes et téléphones. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Titre visible dans l’onglet du navigateur. -->
+  <title>AtmoLab — Quel air respirons-nous aujourd’hui ?</title>
+
+  <!-- Leaflet permet d’afficher la carte participative des observations de plantes. -->
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Fichier principal de style du site. -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- =========================================================
+       BARRE DU HAUT
+       - Logo EASE à gauche
+       - Nom du projet en petit
+       - Navigation principale
+       ========================================================= -->
+  <header class="topbar">
+    <div class="brand">
+      <!-- Place ton vrai logo dans assets/ease.png. Le texte EASE apparaît si le fichier manque. -->
+      <img src="assets/ease.png" alt="Logo EASE" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
+      <span class="logo-fallback" aria-hidden="true">EASE</span>
+      <div>
+        <div class="brand-title">AtmoLab</div>
+        <div class="brand-subtitle">Observer, comprendre, se protéger</div>
+      </div>
+    </div>
+
+    <nav class="main-nav" aria-label="Navigation principale">
+      <button class="nav-button active" data-panel="accueil">Accueil</button>
+      <button class="nav-button" data-panel="risque">Évaluer</button>
+      <button class="nav-button" data-panel="pollens">Pollens</button>
+      <button class="nav-button" data-panel="sable">Brume de sable</button>
+      <button class="nav-button" data-panel="terrain">Ciel et dépôts</button>
+      <button class="nav-button" data-panel="aerer">Quand aérer&nbsp;?</button>
+    </nav>
+  </header>
+
+  <!-- =========================================================
+       PAGE D’ACCUEIL
+       Le titre principal n’est pas “AtmoLab” : on commence par l’utilité du site.
+       ========================================================= -->
+  <main>
+    <section id="accueil" class="panel active">
+      <div class="hero">
+        <div class="hero-text">
+          <p class="tagline">AtmoLab — observer, comprendre, se protéger.</p>
+          <h1>Quel air respirons-nous aujourd’hui&nbsp;?</h1>
+          <p class="hero-subtitle">
+            AtmoLab aide à observer les PM10, la météo, les pollens et les brumes de sable
+            pour comprendre le risque respiratoire et adopter les bons réflexes.
+          </p>
+
+          <div class="hero-actions">
+            <button class="primary" data-panel="risque">Évaluer le risque du jour</button>
+            <button class="secondary" data-panel="pollens">Explorer les pollens</button>
+            <button class="secondary" data-panel="sable">Vérifier une brume de sable</button>
+            <button class="secondary" data-panel="terrain">Observer le ciel et les dépôts</button>
+            <button class="secondary" data-panel="aerer">Quand aérer&nbsp;?</button>
+          </div>
+        </div>
+
+        <aside class="hero-card">
+          <span class="small-label">Tableau de bord</span>
+          <strong id="homeRiskLabel">À évaluer</strong>
+          <p id="homeRiskText">
+            Saisissez les données météo et PM10 pour obtenir une estimation simple du risque respiratoire.
+          </p>
+          <div class="mini-kpis">
+            <span><b>PM10</b> + météo</span>
+            <span><b>Pollens</b> + saison</span>
+            <span><b>Brume</b> + dépôts</span>
+          </div>
+        </aside>
+      </div>
+
+      <section class="card wide intro-card">
+        <h2>Principe du site</h2>
+        <p>
+          Le site ne donne pas une certitude médicale. Il transforme des observations simples
+          en une enquête environnementale : les particules augmentent-elles&nbsp;? Quelle origine est probable&nbsp;?
+          Quels bons réflexes adopter&nbsp;?
+        </p>
+        <div class="steps five-steps">
+          <div><strong>1</strong><span>Mesurer</span><p>PM10, température, humidité, vent, pluie.</p></div>
+          <div><strong>2</strong><span>Observer</span><p>Couleur du ciel, brouillard, dépôts visibles.</p></div>
+          <div><strong>3</strong><span>Comparer</span><p>Pollens, AERONET, Copernicus/CAMS.</p></div>
+          <div><strong>4</strong><span>Évaluer</span><p>Estimer un risque respiratoire simple.</p></div>
+          <div><strong>5</strong><span>Aérer</span><p>Choisir un moment plus favorable pour les classes.</p></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- =========================================================
+         PAGE ÉVALUER LE RISQUE DU JOUR
+         Les facteurs de stagnation de l’air sont utilisés dans le calcul,
+         mais le site n’affiche pas les termes techniques “inversion thermique” ou “stagnation”.
+         ========================================================= -->
+    <section id="risque" class="panel">
+      <div class="section-heading">
+        <span>01</span>
+        <div>
+          <h2>Évaluer le risque du jour</h2>
+          <p>Données de la station de l’école ou données relevées sur des sites locaux.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <form id="riskForm" class="card form-card accent-card">
+          <h3>Données météo et PM10</h3>
+          <p class="muted">
+            Les valeurs peuvent venir d’une station météo scolaire, d’un capteur PM10,
+            d’Atmo local, d’Open-Meteo ou d’un relevé manuel.
+          </p>
+
+          <label>Source des données
+            <select id="dataSource">
+              <option value="station">Station de l’école</option>
+              <option value="site-local">Site local de surveillance</option>
+              <option value="manuel">Saisie manuelle / activité de terrain</option>
+            </select>
+          </label>
+
+          <div class="mini-grid">
+            <label>PM10 en µg/m³
+              <input id="pm10" type="number" step="1" min="0" value="22" />
+            </label>
+            <label>PM2,5 en µg/m³, si disponible
+              <input id="pm25" type="number" step="1" min="0" placeholder="facultatif" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>Température °C
+              <input id="temperature" type="number" step="0.1" value="21" />
+            </label>
+            <label>Humidité %
+              <input id="humidity" type="number" step="1" min="0" max="100" value="55" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>Vent km/h
+              <input id="wind" type="number" step="0.1" min="0" value="12" />
+            </label>
+            <label>Pluie sur 24 h en mm
+              <input id="rain" type="number" step="0.1" min="0" value="0" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>Saison pollinique locale
+              <select id="pollenSeason">
+                <option value="none">Hors saison ou inconnue</option>
+                <option value="moderate">Saison pollinique possible</option>
+                <option value="high">Haute saison pollinique</option>
+              </select>
+            </label>
+            <label>Direction du vent dominante
+              <select id="windDirection">
+                <option value="unknown">Inconnue</option>
+                <option value="south">Sud / sud-ouest</option>
+                <option value="east">Est</option>
+                <option value="north">Nord</option>
+                <option value="west">Ouest</option>
+              </select>
+            </label>
+          </div>
+
+          <label>Observation du ciel
+            <select id="skyObservation">
+              <option value="clear">Ciel clair ou normal</option>
+              <option value="grey">Ciel gris / air trouble</option>
+              <option value="mist">Brouillard ou brume observée</option>
+              <option value="yellow">Ciel jaune, orangé ou laiteux</option>
+            </select>
+          </label>
+
+          <label>Dépôt observé sur les surfaces
+            <select id="depositObservation">
+              <option value="none">Aucun dépôt visible</option>
+              <option value="yellow">Dépôt jaune ou verdâtre</option>
+              <option value="ochre">Dépôt beige, ocre ou orangé</option>
+              <option value="dark">Dépôt gris ou noirâtre</option>
+            </select>
+          </label>
+
+          <button class="primary" type="submit">Calculer l’estimation</button>
+        </form>
+
+        <aside class="card result-card">
+          <span class="eyebrow">Résultat</span>
+          <h3 id="riskLevel">À calculer</h3>
+          <p id="riskMessage" class="result-message">
+            Complétez les données pour obtenir une estimation du risque respiratoire.
+          </p>
+
+          <div class="result-grid">
+            <div>
+              <span>Origine à vérifier</span>
+              <strong id="originHint">—</strong>
+            </div>
+            <div>
+              <span>Action prioritaire</span>
+              <strong id="actionHint">—</strong>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button class="secondary" data-panel="pollens">Explorer les pollens</button>
+            <button class="secondary" data-panel="sable">Vérifier une brume de sable</button>
+            <button class="secondary" data-panel="terrain">Observer les dépôts</button>
+            <button class="secondary" data-panel="aerer">Quand aérer&nbsp;?</button>
+          </div>
+
+          <div class="advice-box">
+            <h4>Bons réflexes</h4>
+            <ul id="adviceList">
+              <li>Surveiller les personnes sensibles si les PM10 augmentent.</li>
+              <li>Comparer les données locales avec les sources externes.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PAGE POLLENS
+         Reprise de l’esprit de PollenLab, sans conserver le nom PollenLab.
+         Sous-onglets : Carte / Observer / Fiches.
+         ========================================================= -->
+    <section id="pollens" class="panel">
+      <div class="section-heading pollen-heading">
+        <span>02</span>
+        <div>
+          <h2>Explorer les pollens</h2>
+          <p>Cartographier les plantes allergisantes, ajouter des observations et consulter les fiches.</p>
+        </div>
+
+        <!-- Image décorative : elle rappelle la page "pollens" sans ajouter de texte.
+             Remplace simplement assets/pissenlit.png si tu veux changer l’illustration. -->
+        <img src="assets/pissenlit.png" alt="" class="pollen-illustration" aria-hidden="true" />
+      </div>
+
+      <div class="subtabs" aria-label="Navigation de la page pollens">
+        <button class="subtab active" data-pollen-tab="pollen-carte">Carte</button>
+        <button class="subtab" data-pollen-tab="pollen-observer">Observer</button>
+        <button class="subtab" data-pollen-tab="pollen-fiches">Fiches</button>
+      </div>
+
+      <section id="pollen-carte" class="pollen-panel active">
+        <div class="dashboard-layout">
+          <div class="card map-card">
+            <div id="map"></div>
+            <p id="mapFallback" class="muted map-fallback">
+              Si la carte ne s’affiche pas, vérifiez la connexion internet ou la bibliothèque Leaflet.
+            </p>
+          </div>
+
+          <aside class="side-stack">
+            <div class="card action-card">
+              <h3>Position et risque local</h3>
+              <p class="muted">Les observations sont stockées uniquement dans ce navigateur.</p>
+              <div class="button-row">
+                <button id="locateBtn" class="primary">Me localiser</button>
+                <button id="clearPollenBtn" class="secondary">Effacer</button>
+              </div>
+              <div id="positionInfo" class="info-box">Position par défaut : Nice.</div>
+              <div class="score-box">
+                <span>Indice local pollens</span>
+                <strong id="pollenRiskBadge">—</strong>
+              </div>
+              <p id="pollenRiskExplanation" class="muted">Ajoutez des observations pour affiner l’indice local.</p>
+            </div>
+
+            <div class="card list-card">
+              <h3>Observations enregistrées</h3>
+              <div id="observationsList" class="list"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="pollen-observer" class="pollen-panel">
+        <div class="grid two">
+          <form id="observationForm" class="card form-card accent-card">
+            <h3>Nouvelle observation</h3>
+            <p class="muted">Choisissez l’essence allergisante, la quantité observée et la localisation.</p>
+
+            <label>Essence observée
+              <select id="plantType" required></select>
+            </label>
+
+            <div id="plantPreview" class="plant-preview" aria-live="polite">
+              <div class="plant-preview-empty">
+                <span>🌿</span>
+                <p>Choisissez une essence allergène. Un aperçu de reconnaissance apparaîtra ici.</p>
+              </div>
+            </div>
+
+            <p id="plantHint" class="info-box small-box">Sélectionnez une plante pour voir sa période pollinique.</p>
+            <button type="button" id="openPlantSheet" class="secondary compact" disabled>Voir la fiche</button>
+
+            <label>Quantité observée
+              <select id="quantity" required>
+                <option value="1 à 3">Entre 1 et 3 pieds / arbres</option>
+                <option value="3 à 10">Entre 3 et 10 pieds / arbres</option>
+                <option value="plus de 10">Plus de 10 pieds / arbres</option>
+              </select>
+            </label>
+
+            <label>Photo de la plante, facultative
+              <input type="file" id="photo" accept="image/*" />
+            </label>
+
+            <div class="mini-grid">
+              <label>Latitude
+                <input id="lat" type="number" step="0.000001" required />
+              </label>
+              <label>Longitude
+                <input id="lng" type="number" step="0.000001" required />
+              </label>
+            </div>
+
+            <label>Commentaire
+              <textarea id="comment" rows="4" placeholder="Ex. alignement de cyprès près de la cour, graminées en bord de route..."></textarea>
+            </label>
+
+            <div class="button-row">
+              <button type="button" id="useMapCenter" class="secondary">Utiliser le centre de la carte</button>
+              <button type="submit" class="primary">Ajouter l’observation</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <h3>Essences intégrées</h3>
+            <p class="muted">Les fiches sont volontairement simples : elles servent de support d’observation de terrain.</p>
+            <div id="plantCards" class="plant-cards"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pollen-fiches" class="pollen-panel">
+        <div class="card wide">
+          <h3>Fiches de reconnaissance</h3>
+          <p class="muted">À compléter avec tes propres photos validées : silhouette, feuille, fleurs, inflorescences, confusions possibles.</p>
+          <div id="plantSheets" class="sheet-grid"></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- =========================================================
+         PAGE BRUME DE SABLE
+         Orientation vers les vérifications externes : AERONET et Copernicus/CAMS.
+         ========================================================= -->
+    <section id="sable" class="panel">
+      <div class="section-heading">
+        <span>03</span>
+        <div>
+          <h2>Vérifier une brume de sable</h2>
+          <p>Quand les PM10 augmentent fortement, on cherche si une partie des particules peut venir de poussières désertiques.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card action-card">
+          <h3>Indices locaux à comparer</h3>
+          <ul class="checklist">
+            <li>PM10 nettement plus élevées que d’habitude.</li>
+            <li>Ciel jaune, orangé, laiteux ou visibilité réduite.</li>
+            <li>Dépôt beige, ocre ou orangé sur les surfaces.</li>
+            <li>Vent ou masse d’air venant du sud / sud-ouest.</li>
+            <li>Hausse observée aussi sur plusieurs stations, pas seulement à l’école.</li>
+          </ul>
+          <p class="info-box">
+            Une hausse de PM10 ne suffit pas à conclure. AtmoLab propose une hypothèse à vérifier,
+            pas une identification certaine.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Sources externes à ouvrir</h3>
+          <p class="muted">Ces liens servent de passerelles pédagogiques. Les élèves comparent leurs mesures avec des données de référence.</p>
+          <div class="external-links">
+            <a href="https://aeronet.gsfc.nasa.gov/" target="_blank" rel="noopener noreferrer">Ouvrir AERONET ↗</a>
+            <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">Ouvrir Copernicus Atmosphere ↗</a>
+            <a href="https://dust.aemet.es/" target="_blank" rel="noopener noreferrer">Ouvrir SDS-WAS poussières ↗</a>
+          </div>
+          <div class="activity-note">
+            <strong>Lecture proposée</strong>
+            <p>
+              Si les PM10 sont fortes et que les données externes montrent une charge en aérosols désertiques,
+              l’hypothèse “brume de sable” devient plus solide.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PAGE CIEL ET DÉPÔTS
+         Observation de terrain : couleur du ciel, dépôts, microscope, H2O2.
+         ========================================================= -->
+    <section id="terrain" class="panel">
+      <div class="section-heading">
+        <span>04</span>
+        <div>
+          <h2>Observer le ciel et les dépôts</h2>
+          <p>Transformer une observation simple en indice scientifique.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Grille d’observation</h3>
+          <table class="simple-table">
+            <thead>
+              <tr><th>Indice</th><th>Hypothèse possible</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Ciel jaune / orangé</td><td>Poussières désertiques possibles</td></tr>
+              <tr><td>Dépôt beige / ocre</td><td>Dépôt minéral possible</td></tr>
+              <tr><td>Dépôt jaune / verdâtre</td><td>Pollen ou matière végétale possible</td></tr>
+              <tr><td>Air gris près du trafic</td><td>Pollution locale possible</td></tr>
+              <tr><td>Brouillard + PM10 élevées</td><td>Risque respiratoire augmenté, origine à vérifier</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>Activité de terrain possible</h3>
+          <ol class="numbered">
+            <li>Déposer une lame, un papier blanc ou une surface témoin dehors pendant une durée fixée.</li>
+            <li>Photographier le ciel et les surfaces.</li>
+            <li>Observer les dépôts à la loupe ou au microscope.</li>
+            <li>Réaliser un test à l’eau oxygénée H₂O₂ comme indice de matière organique.</li>
+            <li>Croiser avec PM10, météo, pollens, AERONET ou Copernicus.</li>
+          </ol>
+          <p class="warning-box">
+            Le test H₂O₂ donne un indice, pas une preuve. La conclusion doit toujours rester prudente.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PAGE QUAND AÉRER ?
+         Cette page relie la qualité de l’air intérieur et le risque extérieur.
+         L’objectif est de donner un conseil simple sans surcharger l’interface.
+         ========================================================= -->
+    <section id="aerer" class="panel">
+      <div class="section-heading">
+        <span>05</span>
+        <div>
+          <h2>Quand aérer&nbsp;?</h2>
+          <p>Renouveler l’air intérieur sans faire entrer un air extérieur plus irritant.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <form id="airingForm" class="card form-card accent-card">
+          <h3>Données de la classe et de l’extérieur</h3>
+          <p class="muted">
+            Cette aide à la décision croise le besoin d’aérer la salle et le risque extérieur
+            lié aux PM10, aux pollens, à la chaleur ou à une brume de sable possible.
+          </p>
+
+          <div class="button-row tight">
+            <button type="button" id="useRiskDataAiring" class="secondary compact">Reprendre les données de l’évaluation du jour</button>
+          </div>
+
+          <div class="mini-grid">
+            <label>CO₂ dans la classe, en ppm
+              <input id="classCo2" type="number" step="10" min="400" value="950" />
+            </label>
+            <label>Température intérieure °C
+              <input id="classTemperature" type="number" step="0.1" value="22" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>Temps depuis la dernière aération, en minutes
+              <input id="minutesSinceAiring" type="number" step="5" min="0" value="45" />
+            </label>
+            <label>Nombre de personnes dans la salle
+              <input id="peopleInRoom" type="number" step="1" min="1" value="28" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>PM10 extérieures en µg/m³
+              <input id="outsidePm10" type="number" step="1" min="0" value="22" />
+            </label>
+            <label>Température extérieure °C
+              <input id="outsideTemperature" type="number" step="0.1" value="21" />
+            </label>
+          </div>
+
+          <div class="mini-grid">
+            <label>Risque pollinique extérieur
+              <select id="outsidePollenRisk">
+                <option value="low">Faible ou inconnu</option>
+                <option value="moderate">Modéré</option>
+                <option value="high">Élevé</option>
+              </select>
+            </label>
+            <label>Brume de sable possible
+              <select id="outsideDustRisk">
+                <option value="none">Non détectée / inconnue</option>
+                <option value="possible">Possible</option>
+                <option value="likely">Probable</option>
+              </select>
+            </label>
+          </div>
+
+          <label>Observation extérieure au moment d’aérer
+            <select id="outsideObservation">
+              <option value="normal">Air extérieur habituel</option>
+              <option value="heat">Chaleur marquée</option>
+              <option value="pollen">Dépôt jaune ou forte gêne allergique</option>
+              <option value="dust">Ciel jaune/orangé ou dépôt ocre</option>
+              <option value="traffic">Air gris, odeur de fumée ou trafic important</option>
+            </select>
+          </label>
+
+          <button class="primary" type="submit">Obtenir un conseil d’aération</button>
+        </form>
+
+        <aside class="card result-card airing-result-card">
+          <span class="eyebrow">Conseil</span>
+          <h3 id="airingDecision">À calculer</h3>
+          <p id="airingMessage" class="result-message">
+            Saisissez les données de la salle et de l’extérieur pour choisir un moment d’aération plus favorable.
+          </p>
+
+          <div class="result-grid">
+            <div>
+              <span>Durée conseillée</span>
+              <strong id="airingDuration">—</strong>
+            </div>
+            <div>
+              <span>Point de vigilance</span>
+              <strong id="airingFocus">—</strong>
+            </div>
+          </div>
+
+          <div class="advice-box">
+            <h4>À retenir</h4>
+            <ul id="airingAdviceList">
+              <li>Aérer reste essentiel pour limiter le confinement de l’air intérieur.</li>
+              <li>Le moment choisi compte si l’air extérieur est très chargé.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <section class="card wide intro-card">
+        <h3>Pourquoi cette page dans AtmoLab&nbsp;?</h3>
+        <p>
+          Dans une salle de classe, l’air intérieur peut vite se charger en CO₂. Aérer est donc nécessaire.
+          Cependant, lors d’un pic de PM10, d’un épisode pollinique, d’une forte chaleur ou d’une brume de sable,
+          il peut être préférable d’aérer plus brièvement ou d’attendre un moment extérieur plus favorable.
+        </p>
+        <p class="muted">
+          Le site affiche un conseil simple. Les facteurs plus techniques, comme la mauvaise dispersion de l’air,
+          restent intégrés dans les calculs d’AtmoLab sans être détaillés pour ne pas surcharger l’interface.
+        </p>
+      </section>
+    </section>
+
+  </main>
+
+  <!-- Fenêtre modale pour afficher une fiche plante sans quitter la page. -->
+  <div id="sheetModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button id="closeModal" class="modal-close" aria-label="Fermer">×</button>
+      <h2 id="modalTitle">Fiche plante</h2>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       BAS DE PAGE
+       Place ton vrai logo Erasmus dans assets/erasmus.png.
+       ========================================================= -->
+  <footer class="site-footer">
+    <img src="assets/erasmus.png" alt="Logo Erasmus+" class="erasmus-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
+    <span class="erasmus-fallback" aria-hidden="true">Erasmus+</span>
+    <p>Prototype pédagogique — ces données ne constituent pas un diagnostic médical.</p>
+  </footer>
+
+  <!-- Bibliothèque Leaflet pour la carte. -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Script principal du site. Le charset renforce l’encodage correct des accents. -->
+  <script src="app.js" charset="UTF-8"></script>
+</body>
+</html>
